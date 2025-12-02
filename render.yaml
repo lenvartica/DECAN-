@@ -1,0 +1,118 @@
+services:
+  # WhatsApp Bot Service
+  - type: web
+    name: deca-xmd-whatsapp-bot
+    env: node
+    plan: free
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    autoDeploy: true
+    
+    # Environment Variables
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: RENDER
+        value: "true"
+      - key: PORT
+        value: 3000
+    
+    # Health Check
+    healthCheckPath: "/"
+    healthCheckTimeout: 10000
+    
+    # Build Configuration
+    buildFilter:
+      paths:
+        - package.json
+        - index.js
+        - youtube-downloader.js
+        - view-once-handler.js
+        - anti-mention.js
+        - kenyan-features.js
+        - bot-functions.js
+    
+    # Resource Limits
+    disk:
+      name: disk
+      sizeGB: 1
+    
+    # Instance Configuration
+    instanceCount: 1
+    region: oregon
+    
+    # Scaling
+    scaling:
+      minInstances: 1
+      maxInstances: 1
+    
+    # Network
+    network:
+      forwardedPorts:
+        - 3000
+    
+    # Dependencies
+    dependencies:
+      - name: node
+        version: "18"
+    
+    # Custom Domains (optional)
+    # domains:
+    #   - deca-xmd-bot.onrender.com
+    
+  # Background Worker for WhatsApp Connection
+  - type: worker
+    name: deca-xmd-worker
+    env: node
+    plan: free
+    buildCommand: "npm install"
+    startCommand: "node index.js"
+    autoDeploy: true
+    
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: RENDER_WORKER
+        value: "true"
+    
+    # Build Configuration
+    buildFilter:
+      paths:
+        - package.json
+        - index.js
+        - youtube-downloader.js
+        - view-once-handler.js
+        - anti-mention.js
+        - kenyan-features.js
+        - bot-functions.js
+    
+    # Resource Limits
+    disk:
+      name: disk
+      sizeGB: 1
+    
+    # Instance Configuration
+    instanceCount: 1
+    region: oregon
+    
+    # Dependencies
+    dependencies:
+      - name: node
+        version: "18"
+
+# Render Configuration File
+# This file configures the Deca XMD WhatsApp Bot for deployment on Render.com
+# 
+# Features:
+# - Web service for health checks and API endpoints
+# - Worker service for WhatsApp connection management
+# - Auto-deployment on code changes
+# - Environment variables for production
+# - Resource limits and scaling configuration
+# - Health checks for monitoring
+#
+# To deploy:
+# 1. Connect your GitHub repository to Render
+# 2. Use this render.yaml file
+# 3. Set up environment variables as needed
+# 4. Deploy and monitor the services

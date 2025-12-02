@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS DECAN TECH</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <canvas id="matrix-canvas"></canvas>
+    <div class="container">
+        <header>
+            <h1 id="heading">
+                <span class="glitch-text">NEXUS DECAN TECH</span>
+            </h1>
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-label">Bot Status:</span>
+                    <span id="bot-status" class="status-value offline">🔴 Offline</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Active Codes:</span>
+                    <span id="active-codes" class="status-value">0</span>
+                </div>
+            </div>
+        </header>
+        
+        <main>
+            <section id="pair" class="cyber-section">
+                <h2 class="section-title">
+                    <span class="pulse-text">PAIR YOUR WHATSAPP</span>
+                </h2>
+                
+                <div id="qr-container" class="qr-container" style="display: none;">
+                    <h3>Scan QR Code with WhatsApp</h3>
+                    <div id="qr-code-display"></div>
+                    <p class="qr-instructions">1. Open WhatsApp<br>2. Tap Menu > Linked Devices<br>3. Scan QR Code</p>
+                </div>
+                
+                <div class="input-group">
+                    <input type="text" id="phone-number" placeholder="Enter phone number (2547********)" class="cyber-input">
+                    <button id="validate-phone" class="validate-btn">✓</button>
+                </div>
+                
+                <div class="button-container">
+                    <button type="submit" id="button" class="cyber-button">
+                        <span class="button-text">generate pairing code</span>
+                    </button>
+                </div>
+                
+                <div class="code-container">
+                    <div id="code" class="code-display">waiting for code...</div>
+                    <button id="copy-code-btn" class="copy-btn" title="Copy Code">📋</button>
+                    <div id="code-timer" class="timer-display">10:00</div>
+                </div>
+                
+                <div id="link-section" class="link-section" style="display: none;">
+                    <h3>Link Your Phone to Bot</h3>
+                    <button id="link-phone-btn" class="link-button">🔗 Link Phone to Bot</button>
+                    <div id="link-status" class="link-status"></div>
+                </div>
+            </section>
+            
+            <section id="info" class="cyber-section">
+                <h2 class="section-title">BOT INFORMATION</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Bot Name:</span>
+                        <span class="info-value">Deca XMD v2.0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Status:</span>
+                        <span id="info-status" class="info-value status-offline">Offline</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Features:</span>
+                        <span class="info-value">YouTube Downloader, View-Once Viewer, Anti-Spam</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Contact:</span>
+                        <span class="info-value">+254711225405</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Email:</span>
+                        <span class="info-value">lennymuriuki7@mail.com</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">WhatsApp:</span>
+                        <span class="info-value">Scan QR to connect</span>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="logs" class="cyber-section">
+                <h2 class="section-title">ACTIVITY LOG</h2>
+                <div id="log-container" class="log-container">
+                    <div class="log-entry">🤖 System initialized...</div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+        // Dynamic WebSocket connection for real-time updates
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
+        let currentCode = null;
+        let codeTimerInterval = null;
+        let phoneNumber = '';
+        
+        // WebSocket event handlers
+        ws.onopen = function() {
+            addLog('🔗 Connected to server', 'success');
+            updateBotStatus();
+        };
+        
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            handleWebSocketMessage(data);
+        };
+        
+        ws.onclose = function() {
+            addLog('❌ Disconnected from server', 'error');
+            // Implement a proper reconnection logic if needed
+        };
+        
+        function handleWebSocketMessage(data) {
+            switch (data.type) {
+                case 'status_update':
+                    updateBotStatusDisplay(data.botStatus);
+                    updateActiveCodes(data.activeCodes);
+                    break;
+                case 'qr_updated':
+                    displayQRCode(data.qrCode);
+                    break;
+                case 'bot_connected':
+                    updateBotStatusDisplay('online');
+                    addLog('🤖 Bot is now online!', 'success');
+                    break;
+                case 'bot_disconnected':
+                    updateBotStatusDisplay('offline');
+                    addLog('🔴 Bot disconnected', 'error');
+                    break;
+                case 'phone_linked':
+                    addLog(`✅ Phone ${data.phoneNumber} linked successfully!`, 'success');
+                    break;
+            }
+        }
+        
+        // DOM elements
+        const button = document.getElementById('button');
+        const phoneInput = document.getElementById('phone-number');
+        const codeDisplay = document.getElementById('code');
+        const codeTimerDisplay = document.getElementById('code-timer');
+        const validateBtn = document.getElementById('validate-phone');
+        const linkSection = document.getElementById('link-section');
+        const linkBtn = document.getElementById('link-phone-btn');
+        const linkStatus = document.getElementById('link-status');
+        const copyCodeBtn = document.getElementById('copy-code-btn');
+        
+        // Phone number validation
+        validateBtn.addEventListener('click', validatePhoneNumber);
+        phoneInput.addEventListener('input', function() {
+            this.style.borderColor = '#00ffff';
+        });
+        
+        function validatePhoneNumber() {
+            const phone = phoneInput.value.trim();
+            const isValid = /^2547\d{8}$/.test(phone.replace(/[^0-9]/g, ''));
+            
+            if (isValid) {
+                phoneInput.style.borderColor = '#00ff00';
+                phoneNumber = phone.replace(/[^0-9]/g, '');
+                addLog(`✅ Phone number validated: ${phoneNumber}`, 'success');
+                return true;
+            } else {
+                phoneInput.style.borderColor = '#ff0000';
+                addLog('❌ Invalid phone number format', 'error');
+                return false;
+            }
+        }
+        
+        // Copy code button
+        copyCodeBtn.addEventListener('click', function() {
+            if (currentCode) {
+                navigator.clipboard.writeText(currentCode).then(() => {
+                    addLog(`📋 Code ${currentCode} copied to clipboard`, 'success');
+                    copyCodeBtn.textContent = '✅';
+                    setTimeout(() => {
+                        copyCodeBtn.textContent = '📋';
+                    }, 2000);
+                }).catch(err => {
+                    addLog('❌ Failed to copy code', 'error');
+                });
+            }
+        });
+
+        // Generate code button
+        button.addEventListener('click', async function() {
+            if (!validatePhoneNumber()) {
+                addLog('❌ Please enter a valid phone number first', 'error');
+                return;
+            }
+            
+            try {
+                button.disabled = true;
+                button.querySelector('.button-text').textContent = 'generating...';
+                addLog('🔄 Generating pairing code...', 'info');
+                
+                const response = await fetch('/api/generate-code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ phoneNumber: phoneNumber })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentCode = data.code;
+                    codeDisplay.textContent = data.code;
+                    codeDisplay.style.animation = 'pulse 2s infinite';
+                    
+                    // Start countdown timer
+                    startCodeTimer(data.expiresAt);
+                    
+                    // Show link section
+                    linkSection.style.display = 'block';
+                    
+                    addLog(`✅ Code generated: ${data.code}`, 'success');
+                    addLog(`⏰ Code expires in 10 minutes`, 'info');
+                } else {
+                    throw new Error(data.message);
+                }
+                
+            } catch (error) {
+                addLog(`❌ Error: ${error.message}`, 'error');
+                codeDisplay.textContent = 'error';
+            } finally {
+                button.disabled = false;
+                button.querySelector('.button-text').textContent = 'generate pairing code';
+            }
+        });
+        
+        // Link phone to bot
+        linkBtn.addEventListener('click', async function() {
+            if (!currentCode) {
+                addLog('❌ No active code to link', 'error');
+                return;
+            }
+            
+            try {
+                linkBtn.disabled = true;
+                linkBtn.textContent = 'linking...';
+                linkStatus.textContent = 'Processing...';
+                
+                const response = await fetch('/api/link-phone', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        phoneNumber: phoneNumber, 
+                        code: currentCode 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    linkStatus.textContent = `✅ ${data.message}`;
+                    linkStatus.style.color = '#00ff00';
+                    addLog(`✅ Phone linked successfully!`, 'success');
+                    addLog(`🤖 Bot features now available for ${data.phoneNumber}`, 'success');
+                } else {
+                    throw new Error(data.message);
+                }
+                
+            } catch (error) {
+                linkStatus.textContent = `❌ ${error.message}`;
+                linkStatus.style.color = '#ff0000';
+                addLog(`❌ Link error: ${error.message}`, 'error');
+            } finally {
+                linkBtn.disabled = false;
+                linkBtn.textContent = '🔗 Link Phone to Bot';
+            }
+        });
+        
+        // Code timer
+        function startCodeTimer(expiresAt) {
+            if (codeTimerInterval) clearInterval(codeTimerInterval);
+
+            codeTimerInterval = setInterval(() => {
+                const now = new Date();
+                const expiry = new Date(expiresAt);
+                const remaining = expiry - now;
+                
+                if (remaining <= 0) {
+                    clearInterval(codeTimerInterval);
+                    codeTimerDisplay.textContent = '00:00';
+                    codeDisplay.textContent = 'expired';
+                    currentCode = null;
+                    linkSection.style.display = 'none';
+                    addLog('⏰ Code expired', 'warning');
+                    return;
+                }
+                
+                const minutes = Math.floor(remaining / 60000);
+                const seconds = Math.floor((remaining % 60000) / 1000);
+                codeTimerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+        
+        // QR Code display
+        function displayQRCode(qrData) {
+            const qrContainer = document.getElementById('qr-container');
+            const qrDisplay = document.getElementById('qr-code-display');
+            
+            // Generate QR code image (would need QR code library)
+            qrDisplay.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}" alt="QR Code">`;
+            qrContainer.style.display = 'block';
+            
+            addLog('📱 QR Code available for scanning', 'info');
+        }
+        
+        // Update bot status
+        function updateBotStatus() {
+            fetch('/api/bot-status')
+                .then(response => response.json())
+                .then(data => {
+                    updateBotStatusDisplay(data.status);
+                    updateActiveCodes(data.activeCodes);
+                    if (data.qrCode) {
+                        displayQRCode(data.qrCode);
+                    }
+                })
+                .catch(error => {
+                    console.error('Status update error:', error);
+                });
+        }
+        
+        function updateBotStatusDisplay(status) {
+            const statusElement = document.getElementById('bot-status');
+            const infoStatus = document.getElementById('info-status');
+            
+            statusElement.className = 'status-value ' + status;
+            infoStatus.className = 'info-value status-' + status;
+            
+            if (status === 'online') {
+                statusElement.textContent = '🟢 Online';
+                infoStatus.textContent = 'Online';
+            } else if (status === 'connecting') {
+                statusElement.textContent = '🟡 Connecting';
+                infoStatus.textContent = 'Connecting...';
+            } else {
+                statusElement.textContent = '🔴 Offline';
+                infoStatus.textContent = 'Offline';
+            }
+        }
+        
+        function updateActiveCodes(count) {
+            document.getElementById('active-codes').textContent = count;
+        }
+        
+        // Activity log
+        function addLog(message, type = 'info') {
+            const logContainer = document.getElementById('log-container');
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry log-' + type;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            logEntry.innerHTML = `<span class="log-time">[${timestamp}]</span> ${message}`;
+            
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            // Keep only last 50 entries
+            while (logContainer.children.length > 50) {
+                logContainer.removeChild(logContainer.firstChild);
+            }
+        }
+        
+        // Auto-update status every 30 seconds
+        setInterval(updateBotStatus, 30000);
+        
+        // Initial status check
+        updateBotStatus();
+        
+        // Cleanup expired codes
+        setInterval(async () => {
+            try {
+                await fetch('/api/cleanup-codes', { method: 'POST' });
+            } catch (error) {
+                console.error('Cleanup error:', error);
+            }
+        }, 60000); // Every minute
+
+        // Matrix digital rain effect
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
+        const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const nums = '0123456789';
+        const alphabet = katakana + latin + nums;
+
+        const fontSize = 16;
+        const columns = canvas.width / fontSize;
+        const rainDrops = [];
+
+        for (let x = 0; x < columns; x++) {
+            rainDrops[x] = 1;
+        }
+
+        const drawMatrix = () => {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#0F0';
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < rainDrops.length; i++) {
+                const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+
+                if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    rainDrops[i] = 0;
+                }
+                rainDrops[i]++;
+            }
+        };
+
+        setInterval(drawMatrix, 33);
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    });
+    </script>
+</body>
+</html>
